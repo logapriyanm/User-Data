@@ -8,7 +8,7 @@ app.use(express.json());
 const PORT = 8000;
 
 app.use(cors({
-    origin:"http://localhost:5173",
+    origin:"https://user-data-frontend-gtb4.onrender.com",
     methods:["GET","POST","PATCH","PUT","DELETE"]
 })); 
 
