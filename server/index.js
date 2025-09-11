@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const users = require("./sample.json");
+let users = require("./sample.json");
 const fs = require("fs")
 
 const app = express();
@@ -16,13 +16,18 @@ app.get("/users", (req, res) => {
   return res.json(users);
 });
 
-app.delete("/users/:id",(req,res)=>{
-    let id = Number(req.params.id);
-    let filteredUsers = users.filter((user)=> user.id !==id);
-    fs.writeFile("./sample.json",JSON.stringify(filteredUsers),(err,data)=>{
-        return res.json(filteredUsers);
-    })
-})
+app.delete("/users/:id", (req, res) => {
+  let id = Number(req.params.id);
+  users = users.filter((user) => user.id !== id);
+
+  fs.writeFile("./sample.json", JSON.stringify(users), (err) => {
+    if (err) {
+      return res.status(500).json({ message: "Error writing file" });
+    }
+    return res.json({ message: "User deleted successfully", users });
+  });
+});
+
 
 app.post("/users",(req,res)=>{
     let {name,age,city}=req.body;
