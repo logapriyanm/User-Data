@@ -3,15 +3,18 @@ import axios from "axios";
 import { useState, useEffect } from 'react';
 
 function App() {
+  // Directly use your deployed backend
+  const BASE_URL = "https://user-data-k2g4.onrender.com";
+
   const [users, setUsers] = useState([]);
   const [filterUsers, setFilterUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userData, setUserData] = useState({ id: null, name: "", age: "", city: "" });
 
-
+  // Get all users
   const getAllUsers = async () => {
     try {
-      const res = await axios.get("http://localhost:8000/users");
+      const res = await axios.get(`${BASE_URL}/users`);
       setUsers(res.data);
       setFilterUsers(res.data);
     } catch (err) {
@@ -23,7 +26,7 @@ function App() {
     getAllUsers();
   }, []);
 
-  //  Search filter
+  // Search filter
   const handleSearchChange = (e) => {
     const searchText = e.target.value.toLowerCase();
     const filteredUsers = users.filter(
@@ -34,12 +37,12 @@ function App() {
     setFilterUsers(filteredUsers);
   };
 
-  //  Delete user
+  // Delete user
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm("Are you sure you want to delete this user?");
     if (isConfirmed) {
       try {
-        await axios.delete(`http://localhost:8000/users/${id}`);
+        await axios.delete(`${BASE_URL}/users/${id}`);
         getAllUsers();
       } catch (err) {
         console.error("Error deleting user:", err);
@@ -47,39 +50,34 @@ function App() {
     }
   };
 
-
   const closeModal = () => {
     setIsModalOpen(false);
     setUserData({ id: null, name: "", age: "", city: "" });
   };
-
 
   const handleAddRecord = () => {
     setUserData({ id: null, name: "", age: "", city: "" });
     setIsModalOpen(true);
   };
 
-
   const handleEdit = (user) => {
     setUserData(user);
     setIsModalOpen(true);
   };
 
-
   const handleData = (e) => {
     setUserData({ ...userData, [e.target.name]: e.target.value });
   };
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (userData.id) {
-     
-        await axios.put(`http://localhost:8000/users/${userData.id}`, userData);
+        // Update existing user
+        await axios.put(`${BASE_URL}/users/${userData.id}`, userData);
       } else {
         // Add new user
-        await axios.post("http://localhost:8000/users", userData);
+        await axios.post(`${BASE_URL}/users`, userData);
       }
       getAllUsers();
       closeModal();
@@ -96,7 +94,6 @@ function App() {
             CRUD Application with React.js Frontend and Node.js Backend
           </h1>
 
-         
           <div className='flex justify-between items-center mb-[20px]'>
             <input
               type="search"
@@ -111,7 +108,6 @@ function App() {
               Add Record
             </button>
           </div>
-
 
           <table className='w-full border-collapse'>
             <thead>
@@ -152,7 +148,6 @@ function App() {
             </tbody>
           </table>
 
-    
           {isModalOpen && (
             <div className='fixed z-10 left-0 top-0 w-full h-full flex justify-center items-center bg-gray-700 bg-opacity-20'>
               <div className='bg-white p-5 border rounded-lg shadow-lg w-80 relative'>
