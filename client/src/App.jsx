@@ -1,52 +1,68 @@
-import './App.css'
+// App.jsx
+import './App.css';
 import axios from "axios";
 import { useState, useEffect } from 'react';
 
 function App() {
-  // Directly use your deployed backend
-  const BASE_URL = "https://user-data-k2g4.onrender.com";
+  // Use REACT_APP_BASE_URL in .env or default to localhost backend
+  const BASE_URL =  "https://user-data-k2g4.onrender.com/" || "http://localhost:8000";
 
   const [users, setUsers] = useState([]);
   const [filterUsers, setFilterUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userData, setUserData] = useState({ id: null, name: "", age: "", city: "" });
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState(""); // small inline notification
 
-  // Get all users
+  const flash = (msg, ms = 2500) => {
+    setNotice(msg);
+    setTimeout(() => setNotice(""), ms);
+  };
+
+  // Fetch users
   const getAllUsers = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(`${BASE_URL}/users`);
-      setUsers(res.data);
-      setFilterUsers(res.data);
+      const normalized = res.data.map(u => ({
+        id: u.id || u._id,
+        name: u.name,
+        age: u.age,
+        city: u.city
+      }));
+      setUsers(normalized);
+      setFilterUsers(normalized);
     } catch (err) {
       console.error("Error fetching users:", err);
+      flash("Error fetching users — check console");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     getAllUsers();
+    // eslint-disable-next-line
   }, []);
 
-  // Search filter
   const handleSearchChange = (e) => {
-    const searchText = e.target.value.toLowerCase();
-    const filteredUsers = users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchText) ||
-        user.city.toLowerCase().includes(searchText)
+    const q = e.target.value.toLowerCase();
+    const filtered = users.filter(u =>
+      (u.name || "").toLowerCase().includes(q) ||
+      (u.city || "").toLowerCase().includes(q)
     );
-    setFilterUsers(filteredUsers);
+    setFilterUsers(filtered);
   };
 
-  // Delete user
   const handleDelete = async (id) => {
-    const isConfirmed = window.confirm("Are you sure you want to delete this user?");
-    if (isConfirmed) {
-      try {
-        await axios.delete(`${BASE_URL}/users/${id}`);
-        getAllUsers();
-      } catch (err) {
-        console.error("Error deleting user:", err);
-      }
+    if (!window.confirm("Delete this user?")) return;
+    try {
+      await axios.delete(`${BASE_URL}/users/${id}`);
+      flash("User deleted");
+      getAllUsers();
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      flash("Delete failed");
     }
   };
 
@@ -61,150 +77,122 @@ function App() {
   };
 
   const handleEdit = (user) => {
-    setUserData(user);
+    setUserData({ id: user.id, name: user.name || "", age: user.age || "", city: user.city || "" });
     setIsModalOpen(true);
   };
 
   const handleData = (e) => {
-    setUserData({ ...userData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setUserData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const payload = { name: (userData.name || "").trim(), age: Number(userData.age), city: (userData.city || "").trim() };
+    if (!payload.name || isNaN(payload.age) || !payload.city) {
+      flash("Please fill all fields correctly");
+      return;
+    }
+
     try {
       if (userData.id) {
-        // Update existing user
-        await axios.put(`${BASE_URL}/users/${userData.id}`, userData);
+        await axios.put(`${BASE_URL}/users/${userData.id}`, payload);
+        flash("User updated");
       } else {
-        // Add new user
-        await axios.post(`${BASE_URL}/users`, userData);
+        await axios.post(`${BASE_URL}/users`, payload);
+        flash("User added");
       }
       getAllUsers();
       closeModal();
     } catch (err) {
       console.error("Error saving user:", err);
+      flash("Save failed");
     }
   };
 
   return (
-    <>
-      <section className='flex justify-center pt-20 items-center'>
-        <div className='w-[600px] mx-[20px]'>
-          <h1 className='text-2xl font-bold text-center p-2 mb-3 border-2 text-gray-600 border-dashed border-gray-500'>
-            CRUD Application with React.js Frontend and Node.js Backend
-          </h1>
+    <div className="min-h-screen bg-slate-50 p-6">
+      <div className="max-w-3xl mx-auto">
+        <header className="mb-6">
+          <h1 className="text-3xl font-bold text-center mb-2">User Manager</h1>
+          <p className="text-center text-sm text-gray-600">Small MERN CRUD — improved UI & fixes</p>
+        </header>
 
-          <div className='flex justify-between items-center mb-[20px]'>
-            <input
-              type="search"
-              placeholder='Search Text Here'
-              onChange={handleSearchChange}
-              className='border w-[300px] p-1 rounded-sm outline-none'
-            />
-            <button
-              onClick={handleAddRecord}
-              className='p-1 text-white rounded-sm bg-green-500 hover:bg-green-700'
-            >
-              Add Record
-            </button>
-          </div>
+        {notice && <div className="bg-green-100 text-green-800 p-2 rounded mb-4 text-center">{notice}</div>}
 
-          <table className='w-full border-collapse'>
-            <thead>
-              <tr>
-                <th className='border border-gray-300 bg-gray-400 p-1'>S.No</th>
-                <th className='border border-gray-300 bg-gray-400 p-1'>Name</th>
-                <th className='border border-gray-300 bg-gray-400 p-1'>Age</th>
-                <th className='border border-gray-300 bg-gray-400 p-1'>City</th>
-                <th className='border border-gray-300 bg-gray-400 p-1'>Edit</th>
-                <th className='border border-gray-300 bg-gray-400 p-1'>Delete</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filterUsers && filterUsers.map((user, index) => (
-                <tr key={user.id}>
-                  <td className='border border-gray-300 p-1'>{index + 1}</td>
-                  <td className='border border-gray-300 p-1'>{user.name}</td>
-                  <td className='border border-gray-300 p-1'>{user.age}</td>
-                  <td className='border border-gray-300 p-1'>{user.city}</td>
-                  <td className='border p-1 border-gray-300'>
-                    <button
-                      onClick={() => handleEdit(user)}
-                      className='p-0.5 px-2 text-white rounded-sm bg-blue-500 hover:bg-blue-700'
-                    >
-                      Edit
-                    </button>
-                  </td>
-                  <td className='border p-1 border-gray-300'>
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className='p-0.5 text-white rounded-sm bg-red-500 hover:bg-red-700'
-                    >
-                      Delete
-                    </button>
-                  </td>
+        <div className="flex gap-4 mb-4">
+          <input
+            type="search"
+            placeholder="Search by name or city..."
+            onChange={handleSearchChange}
+            className="flex-1 p-2 border rounded"
+          />
+          <button onClick={handleAddRecord} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Add</button>
+          <button onClick={getAllUsers} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Refresh</button>
+        </div>
+
+        <div className="bg-white shadow rounded overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center">Loading...</div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-3 text-left">#</th>
+                  <th className="p-3 text-left">Name</th>
+                  <th className="p-3 text-left">Age</th>
+                  <th className="p-3 text-left">City</th>
+                  <th className="p-3">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {isModalOpen && (
-            <div className='fixed z-10 left-0 top-0 w-full h-full flex justify-center items-center bg-gray-700 bg-opacity-20'>
-              <div className='bg-white p-5 border rounded-lg shadow-lg w-80 relative'>
-                <span
-                  onClick={closeModal}
-                  className='absolute top-2 right-3 font-bold text-2xl text-gray-700 hover:text-black cursor-pointer'
-                >
-                  &times;
-                </span>
-                <h2 className='text-2xl mb-4'>{userData.id ? "Edit User" : "Add User"}</h2>
-                <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
-                  <div>
-                    <label className='block mb-1' htmlFor="name">Full Name</label>
-                    <input
-                      onChange={handleData}
-                      className='w-full p-2 rounded-sm border outline-none'
-                      value={userData.name}
-                      type="text"
-                      name='name'
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className='block mb-1' htmlFor="age">Age</label>
-                    <input
-                      onChange={handleData}
-                      className='w-full p-2 rounded-sm border outline-none'
-                      type="number"
-                      value={userData.age}
-                      name='age'
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className='block mb-1' htmlFor="city">City</label>
-                    <input
-                      onChange={handleData}
-                      className='w-full p-2 rounded-sm border outline-none'
-                      type="text"
-                      value={userData.city}
-                      name='city'
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className='p-2 text-white rounded-sm bg-green-500 hover:bg-green-700'
-                  >
-                    {userData.id ? "Update User" : "Add User"}
-                  </button>
-                </form>
-              </div>
-            </div>
+              </thead>
+              <tbody>
+                {filterUsers.length === 0 ? (
+                  <tr><td colSpan="5" className="p-6 text-center text-gray-500">No users found.</td></tr>
+                ) : filterUsers.map((u, i) => (
+                  <tr key={u.id} className={i % 2 ? "bg-gray-50" : ""}>
+                    <td className="p-3 align-top">{i + 1}</td>
+                    <td className="p-3 align-top">{u.name}</td>
+                    <td className="p-3 align-top">{u.age}</td>
+                    <td className="p-3 align-top">{u.city}</td>
+                    <td className="p-3 text-center align-top">
+                      <button onClick={() => handleEdit(u)} className="mr-2 px-3 py-1 bg-blue-500 text-white rounded">Edit</button>
+                      <button onClick={() => handleDelete(u.id)} className="px-3 py-1 bg-red-500 text-white rounded">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
-      </section>
-    </>
+
+        {isModalOpen && (
+          <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded shadow-lg w-full max-w-md p-6 relative">
+              <button onClick={closeModal} className="absolute top-3 right-3 text-2xl">&times;</button>
+              <h2 className="text-xl font-semibold mb-4">{userData.id ? "Edit User" : "Add User"}</h2>
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div>
+                  <label className="block mb-1 text-sm">Full Name</label>
+                  <input name="name" value={userData.name} onChange={handleData} className="w-full p-2 border rounded" required />
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm">Age</label>
+                  <input name="age" value={userData.age} onChange={handleData} type="number" min="0" className="w-full p-2 border rounded" required />
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm">City</label>
+                  <input name="city" value={userData.city} onChange={handleData} className="w-full p-2 border rounded" required />
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button type="button" onClick={closeModal} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-green-500 text-white rounded">{userData.id ? "Update" : "Create"}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
