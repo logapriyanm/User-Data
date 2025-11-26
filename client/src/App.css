@@ -1,1 +1,12 @@
+/* src/App.css - processed by @tailwindcss/vite plugin */
 @import "tailwindcss";
+
+/* small theme variables (optional) */
+:root{ --page-from:#f1f5f9; --page-to:#eef2ff; --card-bg:#fff; --text:#f8fafc; }
+.dark{ --page-from:#0f1724; --page-to:#0b1220; --card-bg:#0b1220; --text:#f8fafc; }
+
+/* tiny helpers you can rely on regardless of Tailwind gen */
+.app-bg { background-image: linear-gradient(135deg, var(--page-from), var(--page-to)); }
+.toast-custom { border-radius: 12px; padding: 10px 14px; font-weight: 600; }
+.bg-card-var { background: var(--card-bg); }
+.text-var { color: var(--text); }

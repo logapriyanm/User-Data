@@ -1,4 +1,4 @@
-// server.js
+// server.js (replace your existing file)
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -7,48 +7,43 @@ const User = require("./models/userModel");
 
 const app = express();
 app.use(express.json());
+app.use(cors()); // dev-friendly, tighten up in production
 
 const PORT = process.env.PORT || 8000;
-
-const allowedOrigins = [
-  process.env.FRONTEND_ORIGIN,
-  "http://localhost:5173",
-  "http://localhost:3000",
-].filter(Boolean);
-
-app.use(cors({
-  origin: function(origin, callback){
-    if(!origin) return callback(null, true);
-    if(allowedOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
-    } else {
-      return callback(new Error('CORS policy: Origin not allowed'), false);
-    }
-  },
-  methods: ["GET", "POST", "PATCH", "PUT", "DELETE"]
-}));
-
 const MONGO_URI = process.env.MONGO_URI;
+
 if (!MONGO_URI) {
-  console.error("MONGO_URI not set in .env file. Exiting.");
+  console.error("❌ MONGO_URI not set in .env. Add MONGO_URI and restart.");
   process.exit(1);
 }
 
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB Atlas"))
-  .catch((err) => {
-    console.error("❌ MongoDB connection error:", err);
-    process.exit(1);
-  });
+// don't pass deprecated/removed options (mongoose v6+/mongodb driver v4+)
+async function start() {
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ Connected to MongoDB");
 
-const mapUser = (u) => ({
+    // start server only after DB connected
+    app.listen(PORT, () => {
+      console.log(`App is running on PORT ${PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err);
+    // exit so process managers (nodemon) don't keep retrying with a half-broken state
+    process.exit(1);
+  }
+}
+
+// --- routes ---
+// lightweight mapper to return id as string
+const mapUser = (u) => (u ? {
   id: u._id.toString(),
   name: u.name,
   age: u.age,
   city: u.city,
   createdAt: u.createdAt,
   updatedAt: u.updatedAt
-});
+} : null);
 
 app.get("/users", async (req, res) => {
   try {
@@ -107,6 +102,9 @@ app.delete("/users/:id", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`App is running on PORT ${PORT}`);
+app.get("/", (req, res) => {
+  res.json({ message: "User Manager API is ready" });
 });
+
+// start the whole thing
+start();
