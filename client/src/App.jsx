@@ -6,7 +6,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { Sun, Moon, RefreshCw, Search, UserPlus, Edit, Trash2, X } from 'lucide-react';
 
 function App() {
-  const BASE_URL = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+  const BASE_URL = "https://user-data-frontend-gtb4.onrender.com" ?? "http://localhost:8000";
   const api = axios.create({ baseURL: BASE_URL, timeout: 8000 });
 
   const [users, setUsers] = useState([]);
