@@ -7,7 +7,7 @@ import { Sun, Moon, RefreshCw, Search, UserPlus, Edit, Trash2, X } from 'lucide-
 
 function App() {
   const BASE_URL = "https://user-data-k2g4.onrender.com" ?? "http://localhost:8000";
-  const api = axios.create({ baseURL: BASE_URL, timeout: 8000 });
+  const api = axios.create({ baseURL: BASE_URL });
 
   const [users, setUsers] = useState([]);
   const [filterUsers, setFilterUsers] = useState([]);
